@@ -73,11 +73,16 @@ NULL | 内存池分配失败。
 示例：
 
 ```c
-ngx_pool_t                  *pool;
-pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
+    ngx_pool_t                  *pool;
 
-if (pool == NULL) {
-    return NGX_CONF_ERROR;
+    pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+    if (pool == NULL) {
+        return NGX_ERROR;
+    }
+
+    ngx_destroy_pool(pool);
+    return NGX_DECLINED;
 }
 ```
 
@@ -98,11 +103,16 @@ pool | 需要释放的内存池。
 示例：
 
 ```c
-ngx_pool_t                  *pool;
-pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
+    ngx_pool_t                  *pool;
 
-if (pool) {
+    pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+    if (pool == NULL) {
+        return NGX_ERROR;
+    }
+
     ngx_destroy_pool(pool);
+    return NGX_DECLINED;
 }
 ```
 
@@ -123,11 +133,17 @@ pool | 需要重置的内存池。
 示例：
 
 ```c
-ngx_pool_t                  *pool;
-pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
+    ngx_pool_t                  *pool;
 
-if (pool) {
+    pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+    if (pool == NULL) {
+        return NGX_ERROR;
+    }
+
     ngx_reset_pool(pool);
+    ngx_destroy_pool(pool);
+    return NGX_DECLINED;
 }
 ```
 
@@ -154,18 +170,21 @@ NULL | 分配失败。
 示例：
 
 ```c
-ngx_pool_t                  *pool;
-pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
-if (pool == NULL) {
-    return NULL;
+static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
+    ngx_pool_t                  *pool;
+
+    pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+    if (pool == NULL) {
+        return NGX_ERROR;
+    }
+
+    ngx_str_t *name = ngx_palloc(pool, sizeof(ngx_str_t));
+    ngx_str_set(name, "test ngx_palloc");
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "name: %V", name);
+
+    ngx_destroy_pool(pool);
+    return NGX_DECLINED;
 }
-
-ngx_str_t *name;
-
-name = ngx_palloc(pool, sizeof(ngx_str_t));
-ngx_str_set(name, "test ngx_palloc");
-
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "name: %V", name);
 ```
 
 ### ngx_pnalloc
@@ -189,18 +208,21 @@ NULL | 分配失败。
 示例：
 
 ```c
-ngx_pool_t                  *pool;
-pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
-if (pool == NULL) {
-    return NULL;
+static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
+    ngx_pool_t                  *pool;
+
+    pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+    if (pool == NULL) {
+        return NGX_ERROR;
+    }
+
+    ngx_str_t *name = ngx_pnalloc(pool, n * sizeof(ngx_str_t));
+    ngx_str_set(name, "test ngx_pnalloc");
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "name: %V", name);
+
+    ngx_destroy_pool(pool);
+    return NGX_DECLINED;
 }
-
-ngx_str_t *name;
-
-name = ngx_pnalloc(pool, sizeof(ngx_str_t));
-ngx_str_set(name, "test ngx_pnalloc");
-
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "name: %V", name);
 ```
 
 ### ngx_pcalloc
@@ -224,18 +246,21 @@ NULL | 分配失败。
 示例：
 
 ```c
-ngx_pool_t                  *pool;
-pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
-if (pool == NULL) {
-    return NULL;
+static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
+    ngx_pool_t                  *pool;
+
+    pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+    if (pool == NULL) {
+        return NGX_ERROR;
+    }
+
+    ngx_str_t *name = ngx_pcalloc(pool, sizeof(ngx_str_t));
+    ngx_str_set(name, "test ngx_pcalloc");
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "name: %V", name);
+
+    ngx_destroy_pool(pool);
+    return NGX_DECLINED;
 }
-
-ngx_str_t *name;
-
-name = ngx_pcalloc(pool, sizeof(ngx_str_t));
-ngx_str_set(name, "test ngx_pcalloc");
-
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "name: %V", name);
 ```
 
 ### ngx_pmemalign
@@ -265,18 +290,29 @@ NGX_DECLINED | 没有找到内存指针，无法回收。
 示例：
 
 ```c
-ngx_pool_t                  *pool;
-pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
-if (pool == NULL) {
-    return NULL;
+static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
+    ngx_pool_t                  *pool;
+
+    pool = ngx_create_pool(128, r->connection->log);
+    if (pool == NULL) {
+        return NGX_ERROR;
+    }
+
+    int n = 100;
+    int i = 0;
+    ngx_str_t *names  = ngx_pcalloc(pool, n * sizeof(ngx_str_t));
+    for (i = 0; i < n; ++i) {
+        ngx_str_set(&names[i], "test ngx_pfree");
+    }
+
+    for (i = 0; i < n; ++i) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "name: %V", &names[i]);
+    }
+
+    ngx_pfree(pool, names);
+    ngx_destroy_pool(pool);
+    return NGX_DECLINED;
 }
-
-ngx_str_t *name;
-
-name = ngx_pcalloc(pool, sizeof(ngx_str_t));
-ngx_str_set(name, "test ngx_pfree");
-
-ngx_pfree(pool, name);
 ```
 
 ### ngx_pool_cleanup_add
@@ -302,13 +338,75 @@ NULL | 分配失败。
 示例：
 
 ```c
+static void ngx_http_test_cleanup_handler(void *data) {
+    ngx_log_stderr(0, "============== ngx_http_test_cleanup_handler ==============");
+}
 
+static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
+    ngx_pool_t                  *pool;
+    ngx_pool_cleanup_t          *cln;
+
+    pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+    if (pool == NULL) {
+        return NGX_ERROR;
+    }
+
+    cln = ngx_pool_cleanup_add(pool, sizeof(ngx_pool_cleanup_file_t));
+    cln->data = 0;
+    cln->handler = ngx_http_test_cleanup_handler;
+    ngx_destroy_pool(pool);
+    return NGX_DECLINED;
+}
 ```
 
 ### ngx_pool_run_cleanup_file
 
+用注册到 pool 中的 cleanup 和 fd，关闭掉指定的文件。常用于主动关闭掉一些临时文件。
+
 ```c
 void ngx_pool_run_cleanup_file(ngx_pool_t *p, ngx_fd_t fd)
+```
+
+输入参数 | 描述
+-|-
+p | 内存池。
+fd | 需要关闭的文件。
+
+示例：
+
+```c
+ngx_pool_run_cleanup_file(r->pool, r->request_body->temp_file->file.fd);
+```
+
+**注意：**
+
+只有当 pool 中注册过 cleanup，并且满足以下条件时，才会进行文件关闭：
+
+- cleanup->handler 为 ngx_pool_cleanup_file。
+- cleanup->data 为 fd 参数。
+
+实现源码：
+
+```c
+void
+ngx_pool_run_cleanup_file(ngx_pool_t *p, ngx_fd_t fd)
+{
+    ngx_pool_cleanup_t       *c;
+    ngx_pool_cleanup_file_t  *cf;
+
+    for (c = p->cleanup; c; c = c->next) {
+        if (c->handler == ngx_pool_cleanup_file) {
+
+            cf = c->data;
+
+            if (cf->fd == fd) {
+                c->handler(cf);
+                c->handler = NULL;
+                return;
+            }
+        }
+    }
+}
 ```
 
 ### ngx_pool_cleanup_file
@@ -322,6 +420,30 @@ void ngx_pool_cleanup_file(void *data)
 输入参数 | 描述
 -|-
 data | 回调使用的数据。这是一种 ngx_pool_cleanup_file_t 类型的指针。
+
+示例：
+
+```c
+static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
+    ngx_pool_t                  *pool;
+    ngx_pool_cleanup_t          *cln;
+
+    pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+    if (pool == NULL) {
+        return NGX_ERROR;
+    }
+
+    cln = ngx_pool_cleanup_add(pool, sizeof(ngx_pool_cleanup_file_t));
+
+    cln->handler = ngx_pool_cleanup_file;
+    cln->data->fd = fd;                     // 已打开的文件描述符
+    cln->data->log = pool->log;
+
+    ngx_destroy_pool(pool)
+
+    return NGX_DECLINED;
+}
+```
 
 ### ngx_pool_delete_file
 
@@ -338,22 +460,26 @@ data | 回调使用的数据。这是一种 ngx_pool_cleanup_file_t 类型的指
 示例：
 
 ```c
-ngx_pool_t                  *pool;
-ngx_pool_cleanup_t          *cln;
+static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
+    ngx_pool_t                  *pool;
+    ngx_pool_cleanup_t          *cln;
 
-pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
-if (pool == NULL) {
-    return NULL;
+    pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
+    if (pool == NULL) {
+        return NGX_ERROR;
+    }
+
+    cln = ngx_pool_cleanup_add(pool, sizeof(ngx_pool_cleanup_file_t));
+
+    cln->handler = ngx_pool_delete_file;
+    cln->data->fd = fd;                     // 已打开的文件描述符
+    cln->data->name = "xxx";                // 要删除的文件路径
+    cln->data->log = pool->log;
+
+    ngx_destroy_pool(pool)
+
+    return NGX_DECLINED;
 }
-
-cln = ngx_pool_cleanup_add(pool, sizeof(ngx_pool_cleanup_file_t));
-
-cln->handler = ngx_pool_delete_file;
-cln->data->fd = fd;                     // 已打开的文件描述符
-cln->data->name = xxx
-cln->data->log = pool->log;
-
-ngx_destroy_pool(pool)
 ```
 
 ## 原理
