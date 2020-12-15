@@ -4,17 +4,16 @@
 
 - [概览](overview.md)
 - [快速开始](quick-start.md)
-- 容器
-  - 概览
+- [容器](containers/overview.md)
   - [内存池](containers/pool.md)
-  - 字符串
-  - 数组
-  - 链表
-  - 缓冲
-  - 队列
-  - 哈希表
-  - 红黑树
-  - 共享内存
+  - [数组](containers/array.md)
+  - [链表](containers/list.md)
+  - [字符串](containers/array.md)
+  - [缓冲](containers/buf.md)
+  - [队列](containers/queue.md)
+  - [哈希表](containers/hash-table.md)
+  - [红黑树](containers/rbt.md)
+  - [共享内存](containers/share-memory.md)
 - HTTP 模块开发
   - 概览
   - Nginx HTTP 阶段
