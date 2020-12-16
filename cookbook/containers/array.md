@@ -13,7 +13,7 @@
     - [原理](#原理)
         - [结构体](#结构体)
         - [内存布局](#内存布局)
-        - [动态分配原理](#动态分配原理)
+        - [动态分配](#动态分配)
         - [回收优化](#回收优化)
 
 <!-- /TOC -->
@@ -76,6 +76,47 @@ static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
 
 ### ngx_array_init
 
+初始化数组存储空间和元数据，这要求 `ngx_array_t` 内存已经存在。通常是一些全局遍变量中的数组初始化。
+
+```c
+gx_int_t ngx_array_init(ngx_array_t *array, ngx_pool_t *pool, ngx_uint_t n, size_t size)
+```
+
+输入参数 | 描述
+-|-
+array | 已经分配空间的 `ngx_array_t` 对象。
+pool | 用于分配内存空间的内存池。
+n | 预分配的元素个数。
+size | 每个元素的大小。
+
+返回值 | 描述
+-|-
+NGX_OK | 初始化成功。
+NGX_ERROR | 初始化失败。
+
+```c
+ngx_cycle_t *
+ngx_init_cycle(ngx_cycle_t *old_cycle)
+{
+    ngx_pool_t                  *pool;
+    log = old_cycle->log;
+    pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, log);
+
+    // cycle 是 Nginx 全局变量
+    if (ngx_array_init(&cycle->paths, pool, n, sizeof(ngx_path_t *))
+        != NGX_OK)
+    {
+        ngx_destroy_pool(pool);
+        return NULL;
+    }
+}
+```
+
+**注意：**
+
+- 初始化数组存储空间其实就是初始化 `ngx_array_t.elts` 指向的内存空间。
+- 初始化元数据其实就是给 `ngx_array_t` 的相应字段初始化值。
+
 ### ngx_array_destroy
 
 销毁数组空间。
@@ -111,7 +152,7 @@ static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
 
 ### ngx_array_push
 
-向数组中 Push 一个元素。函数会返回一个新的元素内存空间，其实本质就是从数组中申请一个元素用于业务侧使用。
+向数组中 Push 一个元素。函数会返回一个新的元素内存空间，其实本质就是从数组中申请一个元素。
 
 声明：
 
@@ -153,9 +194,13 @@ static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
 }
 ```
 
+**注意：**
+
+- 动态分配时，每次都将内存给翻倍。
+
 ### ngx_array_push_n
 
-向数组中 Push 一个元素。函数会返回一个新的元素内存空间，其实本质就是从数组中申请一个元素用于业务侧使用。
+向数组中 Push N 个元素。函数会返回 N 个新的元素连续内存空间，其实本质就是从数组中申请 N 个元素。
 
 声明：
 
@@ -196,6 +241,10 @@ static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
 }
 ```
 
+**注意：**
+
+- 动态分配时，不再是直接将内存空间翻倍，而是根据 push N 的具体值来进行判断扩展的内存空间。
+
 ## 原理
 
 ### 结构体
@@ -205,7 +254,7 @@ typedef struct {
     void        *elts;          // 数组实际存储数据的空间，总大小为 nalloc * size，已使用 nelts * size
     ngx_uint_t   nelts;         // 数组中实际占用的元素个数
     size_t       size;          // 每个数组元素的大小为 size(Byte)
-    ngx_uint_t   nalloc;        // 数组可容纳的最大元素个数
+    ngx_uint_t   nalloc;        // 数组可容纳的最大元素个数（数组预分配的元素个数），可动态扩展
     ngx_pool_t  *pool;          // 用于进行数组内存分配的内存池
 } ngx_array_t;
 ```
@@ -214,9 +263,67 @@ typedef struct {
 
 ![](/resource/ngx_array_t.png)
 
-### 动态分配原理
+### 动态分配
+
+C 语言中的数组结构长度是固定的，使用Nginx 的 `ngx_array_t` 结构，可以得到一个长度不固定的数组，这是依赖动态分配实现的。
+
+`ngx_array_t` 会预先分配一块连续内存空间，当新增元素时，会从连续内存空间中分配元素，若内存空间已经耗尽，会申请额外的内存空间。
+
+动态分配这里有两种情况的处理：
+
+- 当数组是内存池中最后申请的空间，并且扩展后的数组长度仍然没有超过内存池，则直接从内存池中分配连续的空间。
+- 如果不满足上述条件，则从内存池中分配两倍原长度的数组空间，并且将原理的数组值复制到新数组空间。需要注意，原数组并不会被释放。
 
 ```c
+void *
+ngx_array_push(ngx_array_t *a)
+{
+    void        *elt, *new;
+    size_t       size;
+    ngx_pool_t  *p;
+
+    if (a->nelts == a->nalloc) {
+
+        /* the array is full */
+
+        size = a->size * a->nalloc;
+
+        p = a->pool;
+
+        /*
+        如果数组空间位于内存池的最后，并且直接顺序扩充数组也没有超过内存池的空间， 则数组直接将内存池后面的空间占为己有，
+        否则需要分配更大的内存空间，并将原来的数组数据复制到新的内存空间。
+        */
+        if ((u_char *) a->elts + size == p->d.last
+            && p->d.last + a->size <= p->d.end)
+        {
+            /*
+             * the array allocation is the last in the pool
+             * and there is space for new allocation
+             */
+
+            p->d.last += a->size;
+            a->nalloc++;
+
+        } else {
+            /* allocate a new array */
+
+            new = ngx_palloc(p, 2 * size);
+            if (new == NULL) {
+                return NULL;
+            }
+
+            ngx_memcpy(new, a->elts, size);
+            a->elts = new;
+            a->nalloc *= 2;
+        }
+    }
+
+    elt = (u_char *) a->elts + a->size * a->nelts;
+    a->nelts++;
+
+    return elt;
+}
 ```
 
 ### 回收优化
@@ -258,4 +365,4 @@ ngx_array_destroy(ngx_array_t *a)
 
 **注意：**
 
-- 正如注释提到的，只有当使用第一块内存池时这样的判断才有意义。
+- 正如注释提到的，只有当使用第一块内存池时这样的回收操作才有意义。
