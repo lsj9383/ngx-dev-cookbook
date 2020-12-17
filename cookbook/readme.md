@@ -5,10 +5,10 @@
 - [概览](overview.md)
 - [快速开始](quick-start.md)
 - [容器](containers/overview.md)
+  - [字符串](containers/string.md)
   - [内存池](containers/pool.md)
   - [数组](containers/array.md)
   - [链表](containers/list.md)
-  - [字符串](containers/array.md)
   - [缓冲](containers/buf.md)
   - [队列](containers/queue.md)
   - [哈希表](containers/hash-table.md)
@@ -39,6 +39,9 @@
   - 锁
   - Nginx 频道
   - 信号
+- 连接管理
+  - [套接字](connections/socket.md)
+  - [监听连接](connections/listen.md)
 
 ## 附录、参考文献
 

@@ -79,7 +79,7 @@ static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
 初始化数组存储空间和元数据，这要求 `ngx_array_t` 内存已经存在。通常是一些全局遍变量中的数组初始化。
 
 ```c
-gx_int_t ngx_array_init(ngx_array_t *array, ngx_pool_t *pool, ngx_uint_t n, size_t size)
+ngx_int_t ngx_array_init(ngx_array_t *array, ngx_pool_t *pool, ngx_uint_t n, size_t size)
 ```
 
 输入参数 | 描述
@@ -142,7 +142,7 @@ static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
         return NGX_ERROR;
     }
 
-    ngx_array_t *names = ngx_array_create(p, 3, sizeof(ngx_str_t));
+    ngx_array_t *names = ngx_array_create(pool, 3, sizeof(ngx_str_t));
     ngx_array_destroy(names);
 
     ngx_destroy_pool(pool);
@@ -169,26 +169,25 @@ a | 数组指针。
 ```c
 static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
     ngx_pool_t                  *pool;
-
+    ngx_str_t                   *name;
     pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, r->connection->log);
     if (pool == NULL) {
         return NGX_ERROR;
     }
 
-    ngx_array_t *names = ngx_array_create(p, 3, sizeof(ngx_str_t));
-    ngx_str_t* name;
+    ngx_array_t *name_array = ngx_array_create(pool, 3, sizeof(ngx_str_t));
+    name = ngx_array_push(name_array); ngx_str_set(name, "test 1");
+    name = ngx_array_push(name_array); ngx_str_set(name, "test 2");
+    name = ngx_array_push(name_array); ngx_str_set(name, "test 3");
+    name = ngx_array_push(name_array); ngx_str_set(name, "test 4");
 
-    ngx_str_set(ngx_array_push(names), "test 1");
-    ngx_str_set(ngx_array_push(names), "test 2");
-    ngx_str_set(ngx_array_push(names), "test 3");
-    ngx_str_set(ngx_array_push(names), "test 4");
-
-    int i = 0;
-    for (i = 0; i < names->nelts; ++i) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "name[%u]: %V", i, &names[i]);
+    ngx_uint_t i = 0;
+    for (i = 0; i < name_array->nelts; ++i) {
+        name = ((ngx_str_t *) name_array->elts) + i;
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "name_array[%ui]: %V", i, name);
     }
 
-    ngx_array_destroy(names);
+    ngx_array_destroy(name_array);
     ngx_destroy_pool(pool);
     return NGX_DECLINED;
 }
@@ -222,20 +221,21 @@ static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
         return NGX_ERROR;
     }
 
-    ngx_array_t *names = ngx_array_create(p, 3, sizeof(ngx_str_t));
+    ngx_array_t *name_array = ngx_array_create(pool, 3, sizeof(ngx_str_t));
 
-    ngx_str_t* names = ngx_array_push_n(names, 4);
-    ngx_str_set(names[0], "test 1");
-    ngx_str_set(names[1], "test 2");
-    ngx_str_set(names[2], "test 3");
-    ngx_str_set(names[3], "test 4");
+    ngx_str_t *names = ngx_array_push_n(name_array, 4);
+    ngx_str_set(&names[0], "test 1");
+    ngx_str_set(&names[1], "test 2");
+    ngx_str_set(&names[2], "test 3");
+    ngx_str_set(&names[3], "test 4");
 
-    int i = 0;
-    for (i = 0; i < names->nelts; ++i) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "name[%u]: %V", i, &names[i]);
+    ngx_uint_t i = 0;
+    for (i = 0; i < name_array->nelts; ++i) {
+        ngx_str_t *name = ((ngx_str_t *) name_array->elts) + i;
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "name[%ui]: %V", i, name);
     }
 
-    ngx_array_destroy(names);
+    ngx_array_destroy(name_array);
     ngx_destroy_pool(pool);
     return NGX_DECLINED;
 }
