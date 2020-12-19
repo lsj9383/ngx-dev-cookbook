@@ -24,7 +24,7 @@ Nginx 实现了链表，结构体为 `ngx_list_t`。Nginx 的链表是一个特�
 - src/core/ngx_list.h
 - src/core/ngx_list.c
 
-函数声明 | 描述
+函数 | 描述
 -|-
 [ngx_list_create](#ngx_array_create) | 创建新的链表。
 [ngx_list_init](#ngx_array_init) | 初始化链表（如果调用了 ngx_list_create 则已经初始化）。

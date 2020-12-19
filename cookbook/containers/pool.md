@@ -33,7 +33,7 @@
 - src/core/ngx_palloc.h
 - src/core/ngx_palloc.c
 
-函数声明 | 描述
+函数 | 描述
 -|-
 [ngx_create_pool](#ngx_create_pool) | 创建新的内存池。
 [ngx_destroy_pool](#ngx_destroy_pool) | 释放内存池。内存池结构将不可用。

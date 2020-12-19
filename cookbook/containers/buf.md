@@ -40,7 +40,7 @@ Nginx 实现了缓冲区，结构体为 `ngx_buf_t`，通常用于落盘前的�
 
 缓冲区 `ngx_buf_t` 相关函数：
 
-函数声明 | 描述
+函数 | 描述
 -|-
 [ngx_create_temp_buf](#ngx_create_temp_buf) | 创建临时缓冲区，该缓冲区位于内存中。
 [ngx_alloc_buf](#ngx_alloc_buf) | 创建新的链表。
