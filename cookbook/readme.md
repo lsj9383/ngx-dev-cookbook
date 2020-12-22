@@ -13,7 +13,7 @@
   - [链表](containers/list.md)
   - [缓冲区](containers/buf.md)
   - [队列](containers/queue.md)
-  - [哈希表](containers/hash-table.md)
+  - [哈希表](containers/hash.md)
   - [红黑树](containers/rbt.md)
   - [共享内存](containers/share-memory.md)
 - HTTP 模块开发
@@ -32,8 +32,9 @@
     - 设置响应体
     - 重定向响应
   - 子请求
-  - Nginx 变量
   - HTTP 过滤模块
+- Nginx 变量
+- 事件
   - 定时任务
 - 进程通信
   - 共享内存

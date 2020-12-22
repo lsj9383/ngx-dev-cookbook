@@ -18,6 +18,7 @@
   ```sh
   $ cd nginx-1.19.4
   $ ./configure --prefix=/root/workspace/ngx-test-env/nginx \
+               --with-debug
                --with-http_ssl_module \
                --add-module=../ngx_http_test_module
   $ make && make install
