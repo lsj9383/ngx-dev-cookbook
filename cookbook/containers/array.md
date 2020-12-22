@@ -25,7 +25,7 @@ Nginx 实现了动态数组，结构体为 `ngx_array_t`。数组源代码位置
 - src/core/ngx_array.h
 - src/core/ngx_array.c
 
-函数声明 | 描述
+函数 | 描述
 -|-
 [ngx_array_create](#ngx_array_create) | 创建新的数组。
 [ngx_array_init](#ngx_array_init) | 初始化数组（如果调用了 ngx_array_create 则已经初始化）。

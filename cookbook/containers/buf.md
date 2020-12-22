@@ -6,8 +6,8 @@
     - [概述](#概述)
     - [函数](#函数)
         - [ngx_create_temp_buf](#ngx_create_temp_buf)
-        - [ngx_alloc_buf](#ngx_alloc_buf)
         - [ngx_calloc_buf](#ngx_calloc_buf)
+        - [ngx_alloc_buf](#ngx_alloc_buf)
         - [ngx_buf_in_memory](#ngx_buf_in_memory)
         - [ngx_buf_in_memory_only](#ngx_buf_in_memory_only)
         - [ngx_buf_special](#ngx_buf_special)
@@ -40,7 +40,7 @@ Nginx 实现了缓冲区，结构体为 `ngx_buf_t`，通常用于落盘前的�
 
 缓冲区 `ngx_buf_t` 相关函数：
 
-函数声明 | 描述
+函数 | 描述
 -|-
 [ngx_create_temp_buf](#ngx_create_temp_buf) | 创建临时缓冲区，该缓冲区位于内存中。
 [ngx_alloc_buf](#ngx_alloc_buf) | 创建新的链表。
@@ -83,6 +83,97 @@ size | 创建数据区域大小为 size 的缓冲区。数据区域位于用户�
 非 NULL | 缓冲区指针。
 NULL | 创建失败。
 
+示例：
+
+```c
+// 使用 buffer 返回客户端响应
+static ngx_int_t ngx_http_foo_handler(ngx_http_request_t *r) {
+    ngx_http_discard_request_body(r);
+
+    ngx_str_t response = ngx_string("{\"result\": 0}");
+
+    // 组装头部
+    r->headers_out.status = NGX_HTTP_OK;
+    r->headers_out.content_length_n = response.len;
+    ngx_str_set(&r->headers_out.content_type, "application/json");
+
+    // 发送头部
+    ngx_int_t rc = ngx_http_send_header(r);
+    if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
+        return rc;
+    }
+
+    // 组装 body
+    ngx_buf_t *b = ngx_create_temp_buf(r->pool, response.len);
+    ngx_memcpy(b->pos, response.data, response.len);
+    b->last = b->pos + response.len;
+    b->last_buf = 1;
+    b->last_in_chain = 1;
+
+    ngx_chain_t out;
+    out.buf = b;
+    out.next = NULL;
+
+    // 发送响应
+    return ngx_http_output_filter(r, &out);
+}
+```
+
+### ngx_calloc_buf
+
+`ngx_calloc_buf` 是一个宏，用于分配 `ngx_buf_t` 的空间，并且初始化数据为 0。
+
+```c
+#define ngx_calloc_buf(pool) ngx_pcalloc(pool, sizeof(ngx_buf_t))
+```
+
+**注意：**
+
+- 并不会分配缓冲区的数据空间，只会分配缓冲区的结构体元数据。
+
+示例:
+
+```c
+static ngx_int_t
+ngx_http_bar_content_handler(ngx_http_request_t *r)
+{
+    ngx_int_t     rc;
+    ngx_buf_t    *b;
+    ngx_chain_t   out;
+
+    /* send header */
+
+    r->headers_out.status = NGX_HTTP_OK;
+    r->headers_out.content_length_n = 3;
+
+    rc = ngx_http_send_header(r);
+
+    if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
+        return rc;
+    }
+
+    /* send body */
+
+    b = ngx_calloc_buf(r->pool);
+    if (b == NULL) {
+        return NGX_ERROR;
+    }
+
+    b->last_buf = (r == r->main) ? 1: 0;
+    b->last_in_chain = 1;
+
+    b->memory = 1;
+
+    b->pos = (u_char *) "foo";
+    b->last = b->pos + 3;
+
+    out.buf = b;
+    out.next = NULL;
+
+    return ngx_http_output_filter(r, &out);
+}
+```
+
 ### ngx_alloc_buf
 
 `ngx_alloc_buf` 是一个宏，用于分配 `ngx_buf_t` 的空间。
@@ -95,17 +186,7 @@ NULL | 创建失败。
 #define ngx_alloc_buf(pool)  ngx_palloc(pool, sizeof(ngx_buf_t))
 ```
 
-### ngx_calloc_buf
-
-`ngx_calloc_buf` 是一个宏，用于分配 `ngx_buf_t` 的空间，并且初始化数据为 0。
-
-**注意：**
-
-- 并不会分配缓冲区的数据空间，只会分配缓冲区的结构体元数据。
-
-```c
-#define ngx_calloc_buf(pool) ngx_pcalloc(pool, sizeof(ngx_buf_t))
-```
+示例和 [ngx_calloc_buf](#ngx_calloc_buf) 类似。
 
 ### ngx_buf_in_memory
 
