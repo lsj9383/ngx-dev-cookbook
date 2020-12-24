@@ -12,7 +12,7 @@
   - [数组](containers/array.md)
   - [链表](containers/list.md)
   - [缓冲区](containers/buf.md)
-  - [队列](containers/queue.md)
+  - [QUEU](containers/queue.md)
   - [哈希表](containers/hash.md)
   - [红黑树](containers/rbt.md)
   - [共享内存](containers/share-memory.md)
@@ -52,3 +52,4 @@
 - [Niginx Variables](https://nginx.org/en/docs/varindex.html)
 - [Nginx-1.19.4](https://nginx.org/en/download.html)
 - [深入理解 Nginx 模块开发与架构解析](https://book.douban.com/subject/26745255/)
+- [Agentzh 的 Nginx 教程](https://openresty.net.cn/agentzh-nginx-guide.html)

@@ -28,7 +28,7 @@
 
 ## 概述
 
-内存池源代码位置：
+Nginx 通过内存池 `ngx_pool_t` 进行内存的管理，尽可能的避免内存泄漏。内存池源代码位置：
 
 - src/core/ngx_palloc.h
 - src/core/ngx_palloc.c
