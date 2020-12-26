@@ -118,10 +118,12 @@ struct NumberNode {
     ngx_queue_t q;
 };
 
+struct NumberNode node;
+node.value = 0;
+
 ngx_queue_t q;
 ngx_queue_init(&q);
-ngx_queue_t q;
-ngx_queue_insert_head(&q, &NumberNode.q);
+ngx_queue_insert_head(&q, &node.q);
 ```
 
 ### ngx_queue_insert_tail
@@ -149,10 +151,12 @@ struct NumberNode {
     ngx_queue_t q;
 };
 
+struct NumberNode node;
+node.value = 0;
+
 ngx_queue_t q;
 ngx_queue_init(&q);
-ngx_queue_t q;
-ngx_queue_insert_tail(&q, &NumberNode.q);
+ngx_queue_insert_tail(&q, &node.q);
 ```
 
 ### ngx_queue_head
@@ -500,6 +504,23 @@ queue | 队列对象指针。
 示例：
 
 ```c
+struct NumberNode {
+    int value;
+    ngx_queue_t q;
+};
+
+struct NumberNode hn[3];
+hn[0].value = 0;
+hn[1].value = 1;
+hn[2].value = 2;
+
+ngx_queue_t h;
+ngx_queue_init(&h);
+ngx_queue_insert_tail(&h, &hn[0].q);
+ngx_queue_insert_tail(&h, &hn[1].q);
+ngx_queue_insert_tail(&h, &hn[2].q);
+
+ngx_queue_t *n = ngx_queue_middle(&h);
 ```
 
 ### ngx_queue_sort
