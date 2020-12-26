@@ -62,7 +62,7 @@ Nginx 提供了 `ngx_queue_t` 结构以支持队列，该队列结构提供了�
 
 输入参数 | 描述
 -|-
-q | 需要进行初始化的对象，是指针。
+q | 需要进行初始化的队列对象，指针。
 
 示例：
 
@@ -83,7 +83,7 @@ ngx_queue_init(&q);
 
 输入参数 | 描述
 -|-
-q | 队列对象，是指针。
+q | 队列对象指针。判断该队列对象是否为空。
 
 示例：
 
@@ -107,8 +107,8 @@ ngx_queue_empty(&q)
 
 输入参数 | 描述
 -|-
-h | 队列对象。
-x | 待插入的队列节点。
+h | 队列对象指针。
+x | 待插入的队列节点指针。
 
 示例：
 
@@ -138,8 +138,8 @@ ngx_queue_insert_head(&q, &NumberNode.q);
 
 输入参数 | 描述
 -|-
-h | 队列对象。
-x | 待插入的队列节点。
+h | 队列对象指针。
+x | 待插入的队列节点指针。
 
 示例：
 
@@ -166,7 +166,7 @@ ngx_queue_insert_tail(&q, &NumberNode.q);
 
 输入参数 | 描述
 -|-
-h | 队列对象。
+h | 队列对象指针。
 
 返回值就是队列头部元素，
 
@@ -240,7 +240,7 @@ ngx_queue_last(&h);
 
 输入参数 | 描述
 -|-
-q | 队列节点。
+q | 队列节点指针。
 
 ```c
 struct NumberNode {
@@ -273,7 +273,9 @@ ngx_queue_next(&nn[1].q);
 
 输入参数 | 描述
 -|-
-q | 队列节点。
+q | 队列节点指针。
+
+示例：
 
 ```c
 struct NumberNode {
@@ -297,31 +299,259 @@ ngx_queue_prev(&nn[1].q);
 
 ### ngx_queue_remove
 
-删除队列元素。
+删除队列中的元素。通过宏实现：
+
+```c
+#define ngx_queue_remove(x)                                                   \
+    (x)->next->prev = (x)->prev;                                              \
+    (x)->prev->next = (x)->next;                                              \
+    (x)->prev = NULL;                                                         \
+    (x)->next = NULL
+```
+
+输入参数 | 描述
+-|-
+x | 需要从队列中剔除的节点指针。
+
+示例：
+
+```c
+struct NumberNode {
+    int value;
+    ngx_queue_t q;
+};
+
+struct NumberNode nn[3];
+nn[0].value = 0;
+nn[1].value = 1;
+nn[2].value = 2;
+
+ngx_queue_t q;
+ngx_queue_init(&q);
+ngx_queue_insert_tail(&q, &nn[0].q);
+ngx_queue_insert_tail(&q, &nn[1].q);
+ngx_queue_insert_tail(&q, &nn[2].q);
+
+ngx_queue_remove(&nn[1].q);
+```
 
 ### ngx_queue_split
 
-将一个队列拆分成两个队列。
+将一个队列拆分成两个队列。通过宏实现：
+
+```c
+#define ngx_queue_split(h, q, n)                                              \
+    (n)->prev = (h)->prev;                                                    \
+    (n)->prev->next = n;                                                      \
+    (n)->next = q;                                                            \
+    (h)->prev = (q)->prev;                                                    \
+    (h)->prev->next = h;                                                      \
+    (q)->prev = n;
+```
+
+输入参数 | 描述
+-|-
+h | 队列对象指针。
+q | 进行分裂的点，队列节点指针。
+n | 一个新的队列对象指针。
+
+**注意：**
+
+- 分裂出来两个队列，h 是原本队列对象，新的队列对象用 n。
+- 分裂的点 q 会进入新的队列 n。
+
+示例：
+
+```c
+struct NumberNode {
+    int value;
+    ngx_queue_t q;
+};
+
+struct NumberNode nn[3];
+nn[0].value = 0;
+nn[1].value = 1;
+nn[2].value = 2;
+
+ngx_queue_t q;
+ngx_queue_init(&q);
+ngx_queue_insert_tail(&q, &nn[0].q);
+ngx_queue_insert_tail(&q, &nn[1].q);
+ngx_queue_insert_tail(&q, &nn[2].q);
+
+ngx_queue_t n;
+ngx_queue_init(&n);
+ngx_queue_split(&h, &nn[1].q, &n);
+```
 
 ### ngx_queue_add
 
-合并两个链表，将第二个链表添加至第一个链表的末尾。
+合并两个链表，将第二个链表添加至第一个链表的末尾。通过宏实现：
+
+```c
+#define ngx_queue_add(h, n)                                                   \
+    (h)->prev->next = (n)->next;                                              \
+    (n)->next->prev = (h)->prev;                                              \
+    (h)->prev = (n)->prev;                                                    \
+    (h)->prev->next = h;
+```
+
+输入参数 | 描述
+-|-
+h | 队列对象指针。
+n | 另外一个队列对象指针。
+
+**注意：**
+
+- 宏只改变了 h 队列对象的指针信息，因此合并后，新的队列对象用 h 表示。
+- 合并后 n 已经无效（不会有节点指向 n）。
+
+示例：
+
+```c
+struct NumberNode {
+    int value;
+    ngx_queue_t q;
+};
+
+struct NumberNode hn[3];
+hn[0].value = 0;
+hn[1].value = 1;
+hn[2].value = 2;
+
+ngx_queue_t h;
+ngx_queue_init(&h);
+ngx_queue_insert_tail(&h, &hn[0].q);
+ngx_queue_insert_tail(&h, &hn[1].q);
+ngx_queue_insert_tail(&h, &hn[2].q);
+
+struct NumberNode nn[3];
+nn[0].value = 100;
+nn[1].value = 101;
+nn[2].value = 102;
+
+ngx_queue_t n;
+ngx_queue_init(&n);
+ngx_queue_insert_tail(&n, &nn[0].q);
+ngx_queue_insert_tail(&n, &nn[1].q);
+ngx_queue_insert_tail(&n, &nn[2].q);
+
+// 合并
+ngx_queue_add(&h, &n);
+```
 
 ### ngx_queue_data
 
-获得队列对应的数据对象。
+获得队列对应的数据对象。通过宏实现：
+
+```c
+#define ngx_queue_data(q, type, link)                                         \
+    (type *) ((u_char *) q - offsetof(type, link))
+```
+
+输入参数 | 描述
+-|-
+q | 队列节点指针。
+type | 数据类型。
+link | 数据类型中该节点的位置。
+
+返回对应的数据对象指针。
+
+**注意：**
+
+- `offsetof(type, link)` 计算出队列字段在类型中的偏移量。
+- 将队列节点指针 - 偏移量就能找到数据对象的首地址。
+
+示例：
+
+```c
+struct NumberNode {
+    int value;
+    ngx_queue_t q;
+};
+
+struct NumberNode hn;
+hn.value = 0;
+
+
+struct NumberNode *n = ngx_queue_data(&hn[0].q, NumberNode, q);
+```
 
 ### ngx_queue_middle
 
 找到队列的中间元素。
 
+函数声明：
+
+```c
+ngx_queue_t *ngx_queue_middle(ngx_queue_t *queue);
+```
+
+输入参数 | 描述
+-|-
+queue | 队列对象指针。
+
+返回值是中间节点指针。
+
+**注意：**
+
+- 寻找遍历一次就够了，内部维护了 next 和 middle 两个指针，next 每次走两步，middle 每次走一步，因此 next 是 middle 的两倍，当 next 走到终点时，middle 就是队列的中间元素。
+
+示例：
+
+```c
+```
+
 ### ngx_queue_sort
 
 队列进行排序。
 
+函数声明：
+
+```c
+void ngx_queue_sort(ngx_queue_t *queue, ngx_int_t (*cmp)(const ngx_queue_t *, const ngx_queue_t *));
+```
+
+输入参数 | 描述
+-|-
+queue | 队列对象指针。
+cmp | 队列节点的比较方法。
+
+**注意：**
+
+- 该排序算法不适宜大数据量的排序，因为采用的是简单的选择排序。
+
+示例：
+
+```c
+struct NumberNode {
+    int value;
+    ngx_queue_t q;
+};
+
+ngx_int_t ngx_number_node_cmp(const ngx_queue_t *n1, const ngx_queue_t *n2) {
+    return n1->value > n2->value;
+}
+
+struct NumberNode hn[3];
+hn[0].value = 0;
+hn[1].value = 1;
+hn[2].value = 2;
+
+ngx_queue_t h;
+ngx_queue_init(&h);
+ngx_queue_insert_tail(&h, &hn[0].q);
+ngx_queue_insert_tail(&h, &hn[1].q);
+ngx_queue_insert_tail(&h, &hn[2].q);
+
+ngx_queue_sort(&h, ngx_number_node_cmp);
+```
+
 ## 原理
 
 ### 内存布局
+
+![](/resource/ngx_queue_t.png)
 
 从内存布局中可以看到，队列其实就是一个循环双向链表结构，并且有一个 `ngx_queue_t` 的特殊节点用来代表整个队列，该节点不被包含于数据结构中。
 

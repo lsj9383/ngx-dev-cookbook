@@ -12,7 +12,7 @@
   - [数组](containers/array.md)
   - [链表](containers/list.md)
   - [缓冲区](containers/buf.md)
-  - [QUEU](containers/queue.md)
+  - [队列](containers/queue.md)
   - [哈希表](containers/hash.md)
   - [红黑树](containers/rbt.md)
   - [共享内存](containers/share-memory.md)
