@@ -76,7 +76,6 @@ ngx_queue_init(&q);
 判断队列对象是否为空。通过宏实现：
 
 ```c
-
 #define ngx_queue_empty(h)                                                    \
     (h == (h)->prev)
 ```
